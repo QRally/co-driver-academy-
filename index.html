@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Call The Stage - Co-Driver Academy v1.3</title>
+  <title>Call The Stage - Co-Driver Academy v1.5</title>
 
+  <!-- External Libraries for UI and Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
@@ -13,6 +14,13 @@
       touch-action: manipulation;
       -webkit-user-select: none;
       user-select: none;
+    }
+    /* Custom pulse glow for active feedback */
+    .pulse-glow {
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+    }
+    canvas {
+      image-rendering: pixelated;
     }
   </style>
 </head>
@@ -45,24 +53,24 @@
     <!-- Canvas for scrolling road & vehicle -->
     <canvas id="gameCanvas" class="w-full h-full block"></canvas>
 
-    <!-- Co-Driver Pacenote Book HUD (Top Screen Overlay) -->
+    <!-- Co-Driver Pacenote Book HUD -->
     <div id="pacenoteHud" class="absolute top-2 inset-x-3 bg-slate-950/80 backdrop-blur border border-slate-700/80 rounded-xl p-2 shadow-lg flex items-center justify-between z-10 pointer-events-none">
       <div class="text-[10px] font-bold text-amber-400 tracking-wider uppercase flex items-center gap-1 shrink-0">
         <i class="fa-solid fa-book-open"></i> Note Book:
       </div>
       <div id="upcomingNotesList" class="flex items-center gap-1.5 overflow-hidden text-xs font-mono font-bold">
-        <!-- Upcoming note badges injected dynamically -->
+        <!-- Dynamic Badges -->
       </div>
     </div>
 
-    <!-- Overlay Feedback Popups (PERFECT, LATE, MISS) -->
+    <!-- Feedback Popups -->
     <div id="feedbackOverlay" class="absolute top-1/3 pointer-events-none text-center opacity-0 transition-all duration-200 transform -translate-y-2 scale-95 z-10">
       <span id="feedbackText" class="text-3xl font-black uppercase tracking-widest drop-shadow-lg px-4 py-1 rounded-xl bg-slate-950/90 border border-slate-700">
         PERFECT!
       </span>
     </div>
 
-    <!-- Start / Stage Select / Game Over Screen Overlay -->
+    <!-- Start / End Menu Overlay -->
     <div id="startMenu" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-20 flex flex-col items-center justify-center p-5 text-center overflow-y-auto">
       <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl mb-3 shadow-lg shadow-amber-500/10 shrink-0">
         <i class="fa-solid fa-bullhorn"></i>
@@ -94,18 +102,19 @@
         </div>
       </div>
 
+      <!-- Scoring Guide -->
       <div class="w-full max-w-xs space-y-1.5 mb-5 text-left text-[11px] bg-slate-900/80 p-3 rounded-xl border border-slate-800">
         <div class="flex justify-between text-slate-300">
           <span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> PERFECT:</span>
-          <span>Call right at target trigger</span>
+          <span>Call right at target trigger line</span>
         </div>
         <div class="flex justify-between text-slate-300">
-          <span class="text-amber-400 font-bold"><i class="fa-solid fa-clock mr-1"></i> EARLY/LATE:</span>
+          <span class="text-amber-400 font-bold"><i class="fa-solid fa-clock mr-1"></i> GOOD / EARLY:</span>
           <span>Partial points awarded</span>
         </div>
         <div class="flex justify-between text-slate-300">
-          <span class="text-red-400 font-bold"><i class="fa-solid fa-xmark mr-1"></i> MISS:</span>
-          <span>Wrong note or missed corner</span>
+          <span class="text-red-400 font-bold"><i class="fa-solid fa-xmark mr-1"></i> WRONG / MISS:</span>
+          <span>Penalty points deducted</span>
         </div>
       </div>
 
@@ -116,20 +125,21 @@
 
   </main>
 
-  <!-- Control Pad / Note Calling Buttons -->
+  <!-- Control Pad -->
   <footer class="w-full bg-slate-900/95 border-t border-slate-800 p-3 z-10 shrink-0 max-w-md mx-auto">
-    <div class="text-[10px] font-semibold uppercase text-slate-400 tracking-wider mb-2 text-center">
-      Co-Driver Pace Note Keyboard
+    <div class="text-[10px] font-semibold uppercase text-slate-400 tracking-wider mb-2 text-center flex justify-between items-center px-1">
+      <span>Co-Driver Note Keyboard</span>
+      <span class="text-slate-500 font-mono">[A/D: Dir | 1-5: Call]</span>
     </div>
 
     <!-- Direction Selector Buttons -->
     <div class="grid grid-cols-2 gap-2 mb-2">
       <button id="dirLeftBtn" class="dir-btn active py-2.5 bg-blue-600 border border-blue-400 text-white font-black rounded-lg text-sm flex items-center justify-center space-x-2">
         <i class="fa-solid fa-arrow-left"></i>
-        <span>LEFT</span>
+        <span>LEFT (A / ←)</span>
       </button>
       <button id="dirRightBtn" class="dir-btn py-2.5 bg-slate-800 border border-slate-700 text-slate-400 font-black rounded-lg text-sm flex items-center justify-center space-x-2">
-        <span>RIGHT</span>
+        <span>RIGHT (D / →)</span>
         <i class="fa-solid fa-arrow-right"></i>
       </button>
     </div>
@@ -137,19 +147,19 @@
     <!-- Severity Grid -->
     <div class="grid grid-cols-3 gap-2">
       <button data-note="FAST" class="note-call-btn py-3 bg-emerald-950/80 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 font-black rounded-xl text-xs active:scale-95 transition-all">
-        FAST
+        FAST [1]
       </button>
       <button data-note="MEDIUM" class="note-call-btn py-3 bg-amber-950/80 border border-amber-500/40 hover:border-amber-400 text-amber-300 font-black rounded-xl text-xs active:scale-95 transition-all">
-        MEDIUM
+        MEDIUM [2]
       </button>
       <button data-note="EASY" class="note-call-btn py-3 bg-orange-950/80 border border-orange-500/40 hover:border-orange-400 text-orange-300 font-black rounded-xl text-xs active:scale-95 transition-all">
-        EASY
+        EASY [3]
       </button>
       <button data-note="90" class="note-call-btn py-3 bg-red-950/80 border border-red-500/40 hover:border-red-400 text-red-300 font-black rounded-xl text-xs active:scale-95 transition-all">
-        90
+        90 [4]
       </button>
       <button data-note="HAIRPIN" class="note-call-btn py-3 bg-purple-950/80 border border-purple-500/40 hover:border-purple-400 text-purple-300 font-black rounded-xl text-xs active:scale-95 transition-all col-span-2">
-        HAIRPIN
+        HAIRPIN [5]
       </button>
     </div>
   </footer>
@@ -159,26 +169,14 @@
       const canvas = document.getElementById('gameCanvas');
       const ctx = canvas.getContext('2d');
 
-      // Safe Rect Drawing Helper for mobile browser compatibility
-      function drawRoundedRect(ctx, x, y, width, height, radius, fillStyle) {
-        ctx.fillStyle = fillStyle;
-        if (ctx.roundRect) {
-          ctx.beginPath();
-          ctx.roundRect(x, y, width, height, radius);
-          ctx.fill();
-        } else {
-          ctx.fillRect(x, y, width, height);
-        }
-      }
-
-      // Speech Synthesis Voice Engine
+      // Voice Engine for speech callouts
       const synth = window.speechSynthesis;
       function speakNote(text) {
         if (!synth) return;
         try {
-          synth.cancel();
+          synth.cancel(); // Stop any pending voice audio
           const utter = new SpeechSynthesisUtterance(text);
-          utter.rate = 1.35;
+          utter.rate = 1.4;
           utter.pitch = 1.1;
           synth.speak(utter);
         } catch (e) {
@@ -186,7 +184,7 @@
         }
       }
 
-      // Web Audio API Synthesizer
+      // Web Audio Synthesizer for SFX
       let audioCtx = null;
       function playSoundEffect(type) {
         try {
@@ -210,14 +208,32 @@
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
             osc.start(now);
             osc.stop(now + 0.15);
+          } else if (type === 'good') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.exponentialRampToValueAtTime(660, now + 0.12);
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+            osc.start(now);
+            osc.stop(now + 0.12);
           } else if (type === 'miss') {
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, now);
-            osc.frequency.linearRampToValueAtTime(80, now + 0.2);
+            osc.frequency.setValueAtTime(160, now);
+            osc.frequency.linearRampToValueAtTime(70, now + 0.25);
             gain.gain.setValueAtTime(0.3, now);
-            gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
             osc.start(now);
-            osc.stop(now + 0.2);
+            osc.stop(now + 0.25);
+          } else if (type === 'finish') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.setValueAtTime(554.37, now + 0.1);
+            osc.frequency.setValueAtTime(659.25, now + 0.2);
+            osc.frequency.setValueAtTime(880, now + 0.3);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            osc.start(now);
+            osc.stop(now + 0.5);
           }
         } catch (e) {
           console.warn("Audio Context suppressed", e);
@@ -245,73 +261,74 @@
       let stageProgress = 0;
       let animFrameId = null;
 
-      // Stage Definitions
+      // Special Stage Definitions
       const stages = [
         {
           name: "Tarmac Sprint",
           roadColor: '#1e293b',
-          vergeColor: '#334155',
-          bgColor: '#0f172a',
-          scrollSpeed: 3.5,
+          vergeColor: '#0f172a',
+          lineColor: '#f59e0b',
+          scrollSpeed: 3.2,
           length: 3200,
           corners: [
-            { distanceY: 400, type: 'FAST', dir: 'LEFT' },
+            { distanceY: 450, type: 'FAST', dir: 'LEFT' },
             { distanceY: 850, type: 'MEDIUM', dir: 'RIGHT' },
-            { distanceY: 1300, type: 'EASY', dir: 'LEFT' },
-            { distanceY: 1750, type: '90', dir: 'RIGHT' },
-            { distanceY: 2200, type: 'MEDIUM', dir: 'LEFT' },
-            { distanceY: 2650, type: 'HAIRPIN', dir: 'RIGHT' },
-            { distanceY: 3000, type: 'FAST', dir: 'RIGHT' }
+            { distanceY: 1250, type: 'EASY', dir: 'LEFT' },
+            { distanceY: 1650, type: '90', dir: 'RIGHT' },
+            { distanceY: 2050, type: 'MEDIUM', dir: 'LEFT' },
+            { distanceY: 2450, type: 'HAIRPIN', dir: 'RIGHT' },
+            { distanceY: 2850, type: 'FAST', dir: 'LEFT' }
           ]
         },
         {
           name: "Gravel Forest",
           roadColor: '#3f2e18',
-          vergeColor: '#271e10',
-          bgColor: '#0e1f13',
-          scrollSpeed: 4.2,
+          vergeColor: '#1e291e',
+          lineColor: '#d97706',
+          scrollSpeed: 3.8,
           length: 3600,
           corners: [
-            { distanceY: 400, type: 'MEDIUM', dir: 'RIGHT' },
-            { distanceY: 800, type: 'FAST', dir: 'LEFT' },
-            { distanceY: 1200, type: 'HAIRPIN', dir: 'LEFT' },
+            { distanceY: 450, type: 'MEDIUM', dir: 'RIGHT' },
+            { distanceY: 850, type: 'FAST', dir: 'LEFT' },
+            { distanceY: 1250, type: 'HAIRPIN', dir: 'LEFT' },
             { distanceY: 1650, type: '90', dir: 'RIGHT' },
-            { distanceY: 2100, type: 'EASY', dir: 'LEFT' },
-            { distanceY: 2550, type: 'MEDIUM', dir: 'RIGHT' },
-            { distanceY: 3000, type: 'HAIRPIN', dir: 'RIGHT' },
-            { distanceY: 3400, type: 'FAST', dir: 'LEFT' }
+            { distanceY: 2050, type: 'EASY', dir: 'LEFT' },
+            { distanceY: 2450, type: 'MEDIUM', dir: 'RIGHT' },
+            { distanceY: 2850, type: 'HAIRPIN', dir: 'RIGHT' },
+            { distanceY: 3250, type: 'FAST', dir: 'LEFT' }
           ]
         },
         {
           name: "WRC Express",
           roadColor: '#111827',
-          vergeColor: '#374151',
-          bgColor: '#030712',
-          scrollSpeed: 5.2,
+          vergeColor: '#030712',
+          lineColor: '#ef4444',
+          scrollSpeed: 4.6,
           length: 4000,
           corners: [
             { distanceY: 450, type: 'FAST', dir: 'LEFT' },
             { distanceY: 850, type: '90', dir: 'RIGHT' },
             { distanceY: 1250, type: 'HAIRPIN', dir: 'LEFT' },
             { distanceY: 1650, type: 'EASY', dir: 'RIGHT' },
-            { distanceY: 2100, type: 'FAST', dir: 'LEFT' },
-            { distanceY: 2500, type: '90', dir: 'LEFT' },
-            { distanceY: 2950, type: 'MEDIUM', dir: 'RIGHT' },
-            { distanceY: 3400, type: 'HAIRPIN', dir: 'RIGHT' },
-            { distanceY: 3800, type: 'FAST', dir: 'LEFT' }
+            { distanceY: 2050, type: 'FAST', dir: 'LEFT' },
+            { distanceY: 2450, type: '90', dir: 'LEFT' },
+            { distanceY: 2850, type: 'MEDIUM', dir: 'RIGHT' },
+            { distanceY: 3350, type: 'HAIRPIN', dir: 'RIGHT' },
+            { distanceY: 3750, type: 'FAST', dir: 'LEFT' }
           ]
         }
       ];
 
       let activeCorners = [];
 
-      function resizeCanvas() {
+      function syncCanvasSize() {
         const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
+        if (canvas.width !== rect.width || canvas.height !== rect.height) {
+          canvas.width = Math.floor(rect.width);
+          canvas.height = Math.floor(rect.height);
+        }
       }
-      window.addEventListener('resize', resizeCanvas);
-      resizeCanvas();
+      window.addEventListener('resize', syncCanvasSize);
 
       // Stage Selection Handler
       document.querySelectorAll('.stage-select-btn').forEach(btn => {
@@ -326,24 +343,56 @@
       });
 
       // Direction Selectors
-      dirLeftBtn.addEventListener('click', () => {
-        selectedDirection = 'LEFT';
-        dirLeftBtn.className = 'dir-btn active py-2.5 bg-blue-600 border border-blue-400 text-white font-black rounded-lg text-sm flex items-center justify-center space-x-2';
-        dirRightBtn.className = 'dir-btn py-2.5 bg-slate-800 border border-slate-700 text-slate-400 font-black rounded-lg text-sm flex items-center justify-center space-x-2';
+      function setDirection(dir) {
+        selectedDirection = dir;
+        if (dir === 'LEFT') {
+          dirLeftBtn.className = 'dir-btn active py-2.5 bg-blue-600 border border-blue-400 text-white font-black rounded-lg text-sm flex items-center justify-center space-x-2 pulse-glow';
+          dirRightBtn.className = 'dir-btn py-2.5 bg-slate-800 border border-slate-700 text-slate-400 font-black rounded-lg text-sm flex items-center justify-center space-x-2';
+        } else {
+          dirRightBtn.className = 'dir-btn active py-2.5 bg-blue-600 border border-blue-400 text-white font-black rounded-lg text-sm flex items-center justify-center space-x-2 pulse-glow';
+          dirLeftBtn.className = 'dir-btn py-2.5 bg-slate-800 border border-slate-700 text-slate-400 font-black rounded-lg text-sm flex items-center justify-center space-x-2';
+        }
+      }
+
+      dirLeftBtn.addEventListener('click', () => setDirection('LEFT'));
+      dirRightBtn.addEventListener('click', () => setDirection('RIGHT'));
+
+      window.addEventListener('keydown', (e) => {
+        if (!isPlaying) {
+          if (e.code === 'Space' || e.code === 'Enter') startGame();
+          return;
+        }
+
+        if (e.code === 'KeyA' || e.code === 'ArrowLeft') setDirection('LEFT');
+        if (e.code === 'KeyD' || e.code === 'ArrowRight') setDirection('RIGHT');
+
+        const keyMap = {
+          'Digit1': 'FAST',
+          'Digit2': 'MEDIUM',
+          'Digit3': 'EASY',
+          'Digit4': '90',
+          'Digit5': 'HAIRPIN',
+          'Numpad1': 'FAST',
+          'Numpad2': 'MEDIUM',
+          'Numpad3': 'EASY',
+          'Numpad4': '90',
+          'Numpad5': 'HAIRPIN'
+        };
+
+        if (keyMap[e.code]) {
+          processCallout(keyMap[e.code], selectedDirection);
+        }
       });
 
-      dirRightBtn.addEventListener('click', () => {
-        selectedDirection = 'RIGHT';
-        dirRightBtn.className = 'dir-btn active py-2.5 bg-blue-600 border border-blue-400 text-white font-black rounded-lg text-sm flex items-center justify-center space-x-2';
-        dirLeftBtn.className = 'dir-btn py-2.5 bg-slate-800 border border-slate-700 text-slate-400 font-black rounded-lg text-sm flex items-center justify-center space-x-2';
-      });
-
-      // Start Game Session
       function startGame() {
+        if (animFrameId) cancelAnimationFrame(animFrameId);
+
         score = 0;
         stageProgress = 0;
         isPlaying = true;
-        
+
+        syncCanvasSize();
+
         const currentStage = stages[selectedStageIdx];
         activeCorners = currentStage.corners.map(c => ({
           ...c,
@@ -356,10 +405,13 @@
         startMenu.classList.add('hidden');
 
         updatePacenoteHud();
-        requestAnimationFrame(gameLoop);
+        speakNote("Ready... Stage Start!");
+        animFrameId = requestAnimationFrame(gameLoop);
       }
 
-      // Handle Callout Buttons
+      startGameBtn.addEventListener('click', startGame);
+
+      // Attach note call buttons
       document.querySelectorAll('.note-call-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           if (!isPlaying) return;
@@ -371,8 +423,7 @@
       function processCallout(noteType, direction) {
         speakNote(`${noteType} ${direction.toLowerCase()}`);
 
-        const currentStage = stages[selectedStageIdx];
-        const targetZoneY = canvas.height - 180;
+        const targetZoneY = canvas.height - 110;
         let targetCorner = null;
         let minDiff = 9999;
 
@@ -381,198 +432,22 @@
           const screenY = targetZoneY - (c.distanceY - stageProgress);
           const diff = Math.abs(screenY - targetZoneY);
 
-          if (diff < minDiff && screenY < canvas.height) {
+          // Expanded candidate search window from 280px to 380px for earlier calls
+          if (diff < minDiff && diff < 380) {
             minDiff = diff;
             targetCorner = c;
           }
         });
 
-        if (targetCorner && minDiff < 150) {
+        if (targetCorner) {
           if (targetCorner.type === noteType && targetCorner.dir === direction) {
             targetCorner.called = true;
-            playSoundEffect('perfect');
-            if (minDiff < 35) {
+            
+            // Expanded hitboxes: Perfect < 85px (was 50px), Good < 200px (was 140px)
+            if (minDiff < 85) {
+              playSoundEffect('perfect');
               triggerFeedback('PERFECT!', 'text-emerald-400', 'border-emerald-500');
               score += 200;
-            } else if (minDiff < 85) {
-              triggerFeedback('GOOD!', 'text-amber-400', 'border-amber-500');
-              score += 100;
-            } else {
-              triggerFeedback('EARLY!', 'text-orange-400', 'border-orange-500');
-              score += 50;
-            }
-          } else {
-            playSoundEffect('miss');
-            triggerFeedback('WRONG NOTE!', 'text-red-400', 'border-red-500');
-            score = Math.max(0, score - 50);
-          }
-        } else {
-          playSoundEffect('miss');
-          triggerFeedback('NO CORNER!', 'text-slate-400', 'border-slate-600');
-        }
-
-        scoreDisplay.innerText = score.toString();
-        updatePacenoteHud();
-      }
-
-      function updatePacenoteHud() {
-        const remaining = activeCorners.filter(c => !c.called && !c.missed).slice(0, 3);
-        upcomingNotesList.innerHTML = '';
-
-        if (remaining.length === 0) {
-          upcomingNotesList.innerHTML = '<span class="text-slate-500 text-[10px]">Finish Line Ahead</span>';
-          return;
-        }
-
-        remaining.forEach((c, idx) => {
-          const badge = document.createElement('span');
-          const isFirst = idx === 0;
-          badge.className = `px-2 py-0.5 rounded border ${
-            isFirst 
-              ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-black' 
-              : 'bg-slate-800 border-slate-700 text-slate-400'
-          }`;
-          badge.innerText = `${c.type} ${c.dir === 'RIGHT' ? 'R' : 'L'}`;
-          upcomingNotesList.appendChild(badge);
-        });
-      }
-
-      function triggerFeedback(text, colorClass, borderClass) {
-        feedbackText.innerText = text;
-        feedbackText.className = `text-3xl font-black uppercase tracking-widest drop-shadow-lg px-4 py-1 rounded-xl bg-slate-950/90 border ${borderClass} ${colorClass}`;
-        feedbackOverlay.classList.remove('opacity-0', '-translate-y-2', 'scale-95');
-        feedbackOverlay.classList.add('opacity-100', 'translate-y-0', 'scale-100');
-
-        setTimeout(() => {
-          feedbackOverlay.classList.add('opacity-0', '-translate-y-2', 'scale-95');
-          feedbackOverlay.classList.remove('opacity-100', 'translate-y-0', 'scale-100');
-        }, 600);
-      }
-
-      function gameLoop() {
-        if (!isPlaying) return;
-
-        const currentStage = stages[selectedStageIdx];
-        stageProgress += currentStage.scrollSpeed;
-        const progressPct = Math.min(100, Math.floor((stageProgress / currentStage.length) * 100));
-        progressDisplay.innerText = `${progressPct}%`;
-
-        render();
-
-        if (stageProgress >= currentStage.length) {
-          endGame();
-          return;
-        }
-
-        animFrameId = requestAnimationFrame(gameLoop);
-      }
-
-      function render() {
-        const w = canvas.width;
-        const h = canvas.height;
-        const centerX = w / 2;
-        const targetZoneY = h - 180;
-        const currentStage = stages[selectedStageIdx];
-
-        // Background
-        ctx.fillStyle = currentStage.bgColor;
-        ctx.fillRect(0, 0, w, h);
-
-        // Main Road surface
-        ctx.fillStyle = currentStage.roadColor;
-        ctx.beginPath();
-        ctx.moveTo(centerX - 80, 0);
-        ctx.lineTo(centerX + 80, 0);
-        ctx.lineTo(centerX + 80, h);
-        ctx.lineTo(centerX - 80, h);
-        ctx.closePath();
-        ctx.fill();
-
-        // Road Edges / Verge
-        ctx.strokeStyle = currentStage.vergeColor;
-        ctx.lineWidth = 6;
-        ctx.strokeRect(centerX - 80, 0, 160, h);
-
-        // Dashed Centerline
-        ctx.strokeStyle = '#64748b';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([20, 20]);
-        ctx.lineDashOffset = -stageProgress % 40;
-        ctx.beginPath();
-        ctx.moveTo(centerX, 0);
-        ctx.lineTo(centerX, h);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Target Callout Line
-        ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(centerX - 90, targetZoneY);
-        ctx.lineTo(centerX + 90, targetZoneY);
-        ctx.stroke();
-
-        ctx.fillStyle = '#f59e0b';
-        ctx.font = '10px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('TRIGGER ZONE', centerX, targetZoneY - 8);
-
-        // Approaching Corner Markers
-        activeCorners.forEach(c => {
-          const screenY = targetZoneY - (c.distanceY - stageProgress);
-
-          if (screenY > -50 && screenY < h + 50) {
-            const isRight = c.dir === 'RIGHT';
-            const markerX = isRight ? centerX + 110 : centerX - 110;
-
-            if (screenY > targetZoneY + 60 && !c.called && !c.missed) {
-              c.missed = true;
-              playSoundEffect('miss');
-              triggerFeedback('MISSED NOTE!', 'text-red-500', 'border-red-600');
-              updatePacenoteHud();
-            }
-
-            // Marker Badge (using safe function)
-            const badgeColor = c.called ? '#059669' : c.missed ? '#dc2626' : '#2563eb';
-            drawRoundedRect(ctx, markerX - 35, screenY - 20, 70, 40, 8, badgeColor);
-
-            // Text
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 12px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`${c.type} ${isRight ? 'R' : 'L'}`, markerX, screenY);
-
-            // Connection Arrow
-            ctx.strokeStyle = c.called ? '#10b981' : '#60a5fa';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(markerX + (isRight ? -35 : 35), screenY);
-            ctx.lineTo(centerX + (isRight ? 60 : -60), screenY);
-            ctx.stroke();
-          }
-        });
-
-        // Player Rally Car
-        drawRoundedRect(ctx, centerX - 18, targetZoneY + 20, 36, 60, 6, '#ef4444');
-
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(centerX - 14, targetZoneY + 35, 28, 20);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(centerX - 4, targetZoneY + 20, 8, 60);
-      }
-
-      function endGame() {
-        isPlaying = false;
-        menuTitle.innerText = 'Stage Complete!';
-        menuSub.innerText = `${stages[selectedStageIdx].name} finished! Score: ${score} pts`;
-        startGameBtn.innerText = 'Replay or Select Stage';
-        startMenu.classList.remove('hidden');
-      }
-
-      startGameBtn.addEventListener('click', startGame);
-    });
-  </script>
-</body>
-</html>
+            } else if (minDiff < 200) {
+              playSoundEffect('good');
+              triggerFeedback('GOOD!', 'text-amber-400', 'border-amber-

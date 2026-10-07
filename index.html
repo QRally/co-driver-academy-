@@ -5,28 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Call The Stage - Co-Driver Academy v1.5</title>
 
-  <!-- External Libraries for UI and Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
   <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #020617;
+      color: #f8fafc;
+    }
+
     body {
       touch-action: manipulation;
       -webkit-user-select: none;
       user-select: none;
+      overflow: hidden;
     }
-    /* Custom pulse glow for active feedback */
+
     .pulse-glow {
       box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
     }
+
     canvas {
       image-rendering: pixelated;
+      display: block;
+      width: 100%;
+      height: 100%;
     }
   </style>
 </head>
+
 <body class="h-full flex flex-col justify-between overflow-hidden bg-slate-950 text-slate-100 font-sans">
 
-  <!-- Header / Scoreboard -->
   <header class="w-full px-4 py-2 bg-slate-900/90 border-b border-slate-800 flex justify-between items-center z-10 shrink-0">
     <div class="flex items-center space-x-2">
       <i class="fa-solid fa-flag-checkered text-amber-400 text-lg"></i>
@@ -47,40 +58,32 @@
     </div>
   </header>
 
-  <!-- Main Game Canvas Area -->
   <main class="flex-1 relative flex flex-col items-center justify-center w-full max-w-md mx-auto overflow-hidden bg-slate-900">
-    
-    <!-- Canvas for scrolling road & vehicle -->
-    <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+    <canvas id="gameCanvas"></canvas>
 
-    <!-- Co-Driver Pacenote Book HUD -->
     <div id="pacenoteHud" class="absolute top-2 inset-x-3 bg-slate-950/80 backdrop-blur border border-slate-700/80 rounded-xl p-2 shadow-lg flex items-center justify-between z-10 pointer-events-none">
       <div class="text-[10px] font-bold text-amber-400 tracking-wider uppercase flex items-center gap-1 shrink-0">
         <i class="fa-solid fa-book-open"></i> Note Book:
       </div>
-      <div id="upcomingNotesList" class="flex items-center gap-1.5 overflow-hidden text-xs font-mono font-bold">
-        <!-- Dynamic Badges -->
-      </div>
+      <div id="upcomingNotesList" class="flex items-center gap-1.5 overflow-hidden text-xs font-mono font-bold"></div>
     </div>
 
-    <!-- Feedback Popups -->
     <div id="feedbackOverlay" class="absolute top-1/3 pointer-events-none text-center opacity-0 transition-all duration-200 transform -translate-y-2 scale-95 z-10">
       <span id="feedbackText" class="text-3xl font-black uppercase tracking-widest drop-shadow-lg px-4 py-1 rounded-xl bg-slate-950/90 border border-slate-700">
         PERFECT!
       </span>
     </div>
 
-    <!-- Start / End Menu Overlay -->
     <div id="startMenu" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-20 flex flex-col items-center justify-center p-5 text-center overflow-y-auto">
       <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl mb-3 shadow-lg shadow-amber-500/10 shrink-0">
         <i class="fa-solid fa-bullhorn"></i>
       </div>
+
       <h2 id="menuTitle" class="text-2xl font-black uppercase tracking-wide text-white mb-1">Co-Driver Academy</h2>
       <p id="menuSub" class="text-xs text-slate-400 max-w-xs mb-4">
         Call corner notes before the rally car reaches the trigger line!
       </p>
 
-      <!-- Stage Selector -->
       <div class="w-full max-w-xs mb-4">
         <label class="block text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Select Special Stage:</label>
         <div class="grid grid-cols-3 gap-1.5">
@@ -102,7 +105,6 @@
         </div>
       </div>
 
-      <!-- Scoring Guide -->
       <div class="w-full max-w-xs space-y-1.5 mb-5 text-left text-[11px] bg-slate-900/80 p-3 rounded-xl border border-slate-800">
         <div class="flex justify-between text-slate-300">
           <span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> PERFECT:</span>
@@ -122,17 +124,14 @@
         Start Special Stage
       </button>
     </div>
-
   </main>
 
-  <!-- Control Pad -->
   <footer class="w-full bg-slate-900/95 border-t border-slate-800 p-3 z-10 shrink-0 max-w-md mx-auto">
     <div class="text-[10px] font-semibold uppercase text-slate-400 tracking-wider mb-2 text-center flex justify-between items-center px-1">
       <span>Co-Driver Note Keyboard</span>
       <span class="text-slate-500 font-mono">[A/D: Dir | 1-5: Call]</span>
     </div>
 
-    <!-- Direction Selector Buttons -->
     <div class="grid grid-cols-2 gap-2 mb-2">
       <button id="dirLeftBtn" class="dir-btn active py-2.5 bg-blue-600 border border-blue-400 text-white font-black rounded-lg text-sm flex items-center justify-center space-x-2">
         <i class="fa-solid fa-arrow-left"></i>
@@ -144,7 +143,6 @@
       </button>
     </div>
 
-    <!-- Severity Grid -->
     <div class="grid grid-cols-3 gap-2">
       <button data-note="FAST" class="note-call-btn py-3 bg-emerald-950/80 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 font-black rounded-xl text-xs active:scale-95 transition-all">
         FAST [1]
@@ -169,23 +167,35 @@
       const canvas = document.getElementById('gameCanvas');
       const ctx = canvas.getContext('2d');
 
-      // Voice Engine for speech callouts
+      const scoreDisplay = document.getElementById('scoreDisplay');
+      const progressDisplay = document.getElementById('progressDisplay');
+      const startMenu = document.getElementById('startMenu');
+      const menuTitle = document.getElementById('menuTitle');
+      const menuSub = document.getElementById('menuSub');
+      const startGameBtn = document.getElementById('startGameBtn');
+      const feedbackOverlay = document.getElementById('feedbackOverlay');
+      const feedbackText = document.getElementById('feedbackText');
+      const dirLeftBtn = document.getElementById('dirLeftBtn');
+      const dirRightBtn = document.getElementById('dirRightBtn');
+      const upcomingNotesList = document.getElementById('upcomingNotesList');
+
       const synth = window.speechSynthesis;
+
       function speakNote(text) {
         if (!synth) return;
         try {
-          synth.cancel(); // Stop any pending voice audio
+          synth.cancel();
           const utter = new SpeechSynthesisUtterance(text);
-          utter.rate = 1.4;
+          utter.rate = 1.35;
           utter.pitch = 1.1;
           synth.speak(utter);
         } catch (e) {
-          console.warn("Speech API suppressed", e);
+          console.warn('Speech API suppressed', e);
         }
       }
 
-      // Web Audio Synthesizer for SFX
       let audioCtx = null;
+
       function playSoundEffect(type) {
         try {
           const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -204,7 +214,7 @@
             osc.type = 'sine';
             osc.frequency.setValueAtTime(523.25, now);
             osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
-            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.setValueAtTime(0.18, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
             osc.start(now);
             osc.stop(now + 0.15);
@@ -212,7 +222,7 @@
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(440, now);
             osc.frequency.exponentialRampToValueAtTime(660, now + 0.12);
-            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.setValueAtTime(0.15, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
             osc.start(now);
             osc.stop(now + 0.12);
@@ -220,7 +230,7 @@
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(160, now);
             osc.frequency.linearRampToValueAtTime(70, now + 0.25);
-            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.setValueAtTime(0.25, now);
             gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
             osc.start(now);
             osc.stop(now + 0.25);
@@ -230,41 +240,19 @@
             osc.frequency.setValueAtTime(554.37, now + 0.1);
             osc.frequency.setValueAtTime(659.25, now + 0.2);
             osc.frequency.setValueAtTime(880, now + 0.3);
-            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.setValueAtTime(0.2, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
             osc.start(now);
             osc.stop(now + 0.5);
           }
         } catch (e) {
-          console.warn("Audio Context suppressed", e);
+          console.warn('Audio Context suppressed', e);
         }
       }
 
-      // UI Elements
-      const scoreDisplay = document.getElementById('scoreDisplay');
-      const progressDisplay = document.getElementById('progressDisplay');
-      const startMenu = document.getElementById('startMenu');
-      const menuTitle = document.getElementById('menuTitle');
-      const menuSub = document.getElementById('menuSub');
-      const startGameBtn = document.getElementById('startGameBtn');
-      const feedbackOverlay = document.getElementById('feedbackOverlay');
-      const feedbackText = document.getElementById('feedbackText');
-      const dirLeftBtn = document.getElementById('dirLeftBtn');
-      const dirRightBtn = document.getElementById('dirRightBtn');
-      const upcomingNotesList = document.getElementById('upcomingNotesList');
-
-      // Game State
-      let isPlaying = false;
-      let score = 0;
-      let selectedDirection = 'LEFT';
-      let selectedStageIdx = 0;
-      let stageProgress = 0;
-      let animFrameId = null;
-
-      // Special Stage Definitions
       const stages = [
         {
-          name: "Tarmac Sprint",
+          name: 'Tarmac Sprint',
           roadColor: '#1e293b',
           vergeColor: '#0f172a',
           lineColor: '#f59e0b',
@@ -281,7 +269,7 @@
           ]
         },
         {
-          name: "Gravel Forest",
+          name: 'Gravel Forest',
           roadColor: '#3f2e18',
           vergeColor: '#1e291e',
           lineColor: '#d97706',
@@ -299,7 +287,7 @@
           ]
         },
         {
-          name: "WRC Express",
+          name: 'WRC Express',
           roadColor: '#111827',
           vergeColor: '#030712',
           lineColor: '#ef4444',
@@ -319,32 +307,29 @@
         }
       ];
 
+      let isPlaying = false;
+      let score = 0;
+      let selectedDirection = 'LEFT';
+      let selectedStageIdx = 0;
+      let stageProgress = 0;
+      let animFrameId = null;
+      let lastFrameTime = 0;
       let activeCorners = [];
 
       function syncCanvasSize() {
         const rect = canvas.getBoundingClientRect();
-        if (canvas.width !== rect.width || canvas.height !== rect.height) {
-          canvas.width = Math.floor(rect.width);
-          canvas.height = Math.floor(rect.height);
+        const desiredWidth = Math.max(320, Math.floor(rect.width || window.innerWidth));
+        const desiredHeight = Math.max(320, Math.floor(rect.height || window.innerHeight * 0.6));
+
+        if (canvas.width !== desiredWidth || canvas.height !== desiredHeight) {
+          canvas.width = desiredWidth;
+          canvas.height = desiredHeight;
         }
       }
-      window.addEventListener('resize', syncCanvasSize);
 
-      // Stage Selection Handler
-      document.querySelectorAll('.stage-select-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          document.querySelectorAll('.stage-select-btn').forEach(b => {
-            b.className = 'stage-select-btn p-2 rounded-lg border border-slate-800 bg-slate-900 text-slate-400 font-bold text-xs flex flex-col items-center';
-          });
-          const target = e.currentTarget;
-          selectedStageIdx = parseInt(target.getAttribute('data-stage'));
-          target.className = 'stage-select-btn active p-2 rounded-lg border border-amber-500 bg-amber-500/20 text-amber-300 font-bold text-xs flex flex-col items-center';
-        });
-      });
-
-      // Direction Selectors
       function setDirection(dir) {
         selectedDirection = dir;
+
         if (dir === 'LEFT') {
           dirLeftBtn.className = 'dir-btn active py-2.5 bg-blue-600 border border-blue-400 text-white font-black rounded-lg text-sm flex items-center justify-center space-x-2 pulse-glow';
           dirRightBtn.className = 'dir-btn py-2.5 bg-slate-800 border border-slate-700 text-slate-400 font-black rounded-lg text-sm flex items-center justify-center space-x-2';
@@ -354,8 +339,26 @@
         }
       }
 
+      function updateStageButtons() {
+        document.querySelectorAll('.stage-select-btn').forEach((btn) => {
+          const isActive = Number(btn.dataset.stage) === selectedStageIdx;
+          btn.className = isActive
+            ? 'stage-select-btn active p-2 rounded-lg border border-amber-500 bg-amber-500/20 text-amber-300 font-bold text-xs flex flex-col items-center'
+            : 'stage-select-btn p-2 rounded-lg border border-slate-800 bg-slate-900 text-slate-400 font-bold text-xs flex flex-col items-center';
+        });
+      }
+
+      document.querySelectorAll('.stage-select-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          selectedStageIdx = Number(btn.dataset.stage);
+          updateStageButtons();
+        });
+      });
+
       dirLeftBtn.addEventListener('click', () => setDirection('LEFT'));
       dirRightBtn.addEventListener('click', () => setDirection('RIGHT'));
+
+      window.addEventListener('resize', syncCanvasSize);
 
       window.addEventListener('keydown', (e) => {
         if (!isPlaying) {
@@ -367,16 +370,16 @@
         if (e.code === 'KeyD' || e.code === 'ArrowRight') setDirection('RIGHT');
 
         const keyMap = {
-          'Digit1': 'FAST',
-          'Digit2': 'MEDIUM',
-          'Digit3': 'EASY',
-          'Digit4': '90',
-          'Digit5': 'HAIRPIN',
-          'Numpad1': 'FAST',
-          'Numpad2': 'MEDIUM',
-          'Numpad3': 'EASY',
-          'Numpad4': '90',
-          'Numpad5': 'HAIRPIN'
+          Digit1: 'FAST',
+          Digit2: 'MEDIUM',
+          Digit3: 'EASY',
+          Digit4: '90',
+          Digit5: 'HAIRPIN',
+          Numpad1: 'FAST',
+          Numpad2: 'MEDIUM',
+          Numpad3: 'EASY',
+          Numpad4: '90',
+          Numpad5: 'HAIRPIN'
         };
 
         if (keyMap[e.code]) {
@@ -384,55 +387,92 @@
         }
       });
 
+      document.querySelectorAll('.note-call-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (!isPlaying) return;
+          const noteType = btn.getAttribute('data-note');
+          processCallout(noteType, selectedDirection);
+        });
+      });
+
+      function updatePacenoteHud() {
+        const remaining = activeCorners.filter((c) => !c.called && !c.missed).slice(0, 3);
+        upcomingNotesList.innerHTML = '';
+
+        if (remaining.length === 0) {
+          upcomingNotesList.innerHTML = '<span class=\"text-emerald-400 text-[10px] font-bold\"><i class=\"fa-solid fa-flag-checkered mr-1\"></i> FINISH LINE AHEAD</span>';
+          return;
+        }
+
+        remaining.forEach((c, idx) => {
+          const badge = document.createElement('span');
+          badge.className = `px-2 py-0.5 rounded border text-[11px] font-mono tracking-tight ${
+            idx === 0
+              ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-black animate-pulse'
+              : 'bg-slate-800 border-slate-700 text-slate-400'
+          }`;
+          badge.textContent = `${c.type} ${c.dir === 'RIGHT' ? 'R' : 'L'}`;
+          upcomingNotesList.appendChild(badge);
+        });
+      }
+
+      function triggerFeedback(text, colorClass, borderClass) {
+        feedbackText.textContent = text;
+        feedbackText.className = `text-3xl font-black uppercase tracking-widest drop-shadow-lg px-4 py-1.5 rounded-xl bg-slate-950/90 border ${borderClass} ${colorClass}`;
+
+        feedbackOverlay.classList.remove('opacity-0', '-translate-y-2', 'scale-95');
+        feedbackOverlay.classList.add('opacity-100', 'translate-y-0', 'scale-100');
+
+        setTimeout(() => {
+          feedbackOverlay.classList.add('opacity-0', '-translate-y-2', 'scale-95');
+          feedbackOverlay.classList.remove('opacity-100', 'translate-y-0', 'scale-100');
+        }, 550);
+      }
+
       function startGame() {
         if (animFrameId) cancelAnimationFrame(animFrameId);
 
+        isPlaying = true;
         score = 0;
         stageProgress = 0;
-        isPlaying = true;
+        lastFrameTime = 0;
 
         syncCanvasSize();
 
         const currentStage = stages[selectedStageIdx];
-        activeCorners = currentStage.corners.map(c => ({
+        activeCorners = currentStage.corners.map((c) => ({
           ...c,
           called: false,
           missed: false
         }));
 
-        scoreDisplay.innerText = '0';
-        progressDisplay.innerText = '0%';
+        setDirection('LEFT');
+        scoreDisplay.textContent = '0';
+        progressDisplay.textContent = '0%';
         startMenu.classList.add('hidden');
 
         updatePacenoteHud();
-        speakNote("Ready... Stage Start!");
+        speakNote('Ready... Stage Start!');
         animFrameId = requestAnimationFrame(gameLoop);
       }
 
       startGameBtn.addEventListener('click', startGame);
 
-      // Attach note call buttons
-      document.querySelectorAll('.note-call-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          if (!isPlaying) return;
-          const noteType = e.currentTarget.getAttribute('data-note');
-          processCallout(noteType, selectedDirection);
-        });
-      });
-
       function processCallout(noteType, direction) {
+        if (!isPlaying) return;
+
         speakNote(`${noteType} ${direction.toLowerCase()}`);
 
         const targetZoneY = canvas.height - 110;
         let targetCorner = null;
-        let minDiff = 9999;
+        let minDiff = Number.MAX_SAFE_INTEGER;
 
-        activeCorners.forEach(c => {
+        activeCorners.forEach((c) => {
           if (c.called || c.missed) return;
+
           const screenY = targetZoneY - (c.distanceY - stageProgress);
           const diff = Math.abs(screenY - targetZoneY);
 
-          // Expanded candidate search window from 280px to 380px for earlier calls
           if (diff < minDiff && diff < 380) {
             minDiff = diff;
             targetCorner = c;
@@ -442,12 +482,210 @@
         if (targetCorner) {
           if (targetCorner.type === noteType && targetCorner.dir === direction) {
             targetCorner.called = true;
-            
-            // Expanded hitboxes: Perfect < 85px (was 50px), Good < 200px (was 140px)
+
             if (minDiff < 85) {
               playSoundEffect('perfect');
               triggerFeedback('PERFECT!', 'text-emerald-400', 'border-emerald-500');
               score += 200;
             } else if (minDiff < 200) {
               playSoundEffect('good');
-              triggerFeedback('GOOD!', 'text-amber-400', 'border-amber-
+              triggerFeedback('GOOD!', 'text-amber-400', 'border-amber-500');
+              score += 100;
+            } else {
+              playSoundEffect('good');
+              triggerFeedback('EARLY!', 'text-orange-400', 'border-orange-500');
+              score += 50;
+            }
+          } else {
+            playSoundEffect('miss');
+            triggerFeedback('WRONG NOTE!', 'text-red-400', 'border-red-500');
+            score = Math.max(0, score - 50);
+          }
+        } else {
+          playSoundEffect('miss');
+          triggerFeedback('NO CORNER!', 'text-slate-400', 'border-slate-600');
+          score = Math.max(0, score - 20);
+        }
+
+        scoreDisplay.textContent = String(score);
+        updatePacenoteHud();
+      }
+
+      function finishStage() {
+        isPlaying = false;
+        playSoundEffect('finish');
+        speakNote('Special Stage Complete! Outstanding job co-driver!');
+
+        const currentStage = stages[selectedStageIdx];
+        menuTitle.textContent = 'STAGE FINISHED!';
+        menuSub.innerHTML = `Final Score: <strong class="text-amber-400 text-base">${score} pts</strong><br>Stage: ${currentStage.name}`;
+        startGameBtn.textContent = 'Replay Special Stage';
+        startMenu.classList.remove('hidden');
+      }
+
+      function gameLoop(ts) {
+        if (!isPlaying) return;
+
+        if (!lastFrameTime) lastFrameTime = ts;
+        const delta = Math.min(32, ts - lastFrameTime);
+        lastFrameTime = ts;
+
+        syncCanvasSize();
+        const w = canvas.width;
+        const h = canvas.height;
+        const currentStage = stages[selectedStageIdx];
+
+        stageProgress += (currentStage.scrollSpeed * delta) / 16.67;
+
+        const progressPct = Math.min(100, Math.floor((stageProgress / currentStage.length) * 100));
+        progressDisplay.textContent = `${progressPct}%`;
+
+        const targetZoneY = h - 110;
+
+        activeCorners.forEach((c) => {
+          if (!c.called && !c.missed) {
+            const screenY = targetZoneY - (c.distanceY - stageProgress);
+            if (screenY > targetZoneY + 140) {
+              c.missed = true;
+              playSoundEffect('miss');
+              triggerFeedback('MISSED!', 'text-red-500', 'border-red-600');
+              score = Math.max(0, score - 50);
+              scoreDisplay.textContent = String(score);
+              updatePacenoteHud();
+            }
+          }
+        });
+
+        ctx.fillStyle = currentStage.vergeColor;
+        ctx.fillRect(0, 0, w, h);
+
+        const roadWidth = Math.min(w * 0.55, 220);
+        const roadX = (w - roadWidth) / 2;
+
+        ctx.fillStyle = currentStage.roadColor;
+        ctx.fillRect(roadX, 0, roadWidth, h);
+
+        const dashLen = 26;
+        const offset = Math.floor(stageProgress) % (dashLen * 2);
+
+        for (let y = -dashLen * 2; y < h + dashLen; y += dashLen) {
+          const drawY = y + offset;
+          const isRed = Math.floor((drawY - offset) / dashLen) % 2 === 0;
+          ctx.fillStyle = isRed ? '#ef4444' : '#ffffff';
+
+          ctx.fillRect(roadX - 8, drawY, 8, dashLen);
+          ctx.fillRect(roadX + roadWidth, drawY, 8, dashLen);
+        }
+
+        ctx.strokeStyle = currentStage.lineColor;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([20, 20]);
+        ctx.lineDashOffset = -stageProgress;
+        ctx.beginPath();
+        ctx.moveTo(w / 2, 0);
+        ctx.lineTo(w / 2, h);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const callZoneHeight = 120;
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.22)';
+        ctx.fillRect(roadX, targetZoneY - 80, roadWidth, callZoneHeight);
+
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 6]);
+        ctx.beginPath();
+        ctx.moveTo(roadX, targetZoneY - 80);
+        ctx.lineTo(roadX + roadWidth, targetZoneY - 80);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(roadX, targetZoneY);
+        ctx.lineTo(roadX + roadWidth, targetZoneY);
+        ctx.stroke();
+
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText('CALL ZONE', roadX - 12, targetZoneY + 4);
+
+        activeCorners.forEach((c) => {
+          const screenY = targetZoneY - (c.distanceY - stageProgress);
+
+          if (screenY > -100 && screenY < h + 100) {
+            let statusColor = '#38bdf8';
+            if (c.called) statusColor = '#10b981';
+            if (c.missed) statusColor = '#ef4444';
+
+            ctx.strokeStyle = statusColor;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(roadX, screenY);
+            ctx.lineTo(roadX + roadWidth, screenY);
+            ctx.stroke();
+
+            const isRight = c.dir === 'RIGHT';
+            const signX = isRight ? roadX + roadWidth + 16 : roadX - 56;
+
+            ctx.fillStyle = '#0f172a';
+            ctx.strokeStyle = statusColor;
+            ctx.lineWidth = 2;
+            ctx.fillRect(signX, screenY - 16, 40, 32);
+            ctx.strokeRect(signX, screenY - 16, 40, 32);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(c.type, signX + 20, screenY - 2);
+            ctx.fillStyle = c.dir === 'RIGHT' ? '#38bdf8' : '#f59e0b';
+            ctx.fillText(c.dir === 'RIGHT' ? 'R →' : '← L', signX + 20, screenY + 10);
+          }
+        });
+
+        const carX = w / 2;
+        const carY = h - 75;
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.beginPath();
+        ctx.ellipse(carX, carY + 18, 18, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(carX - 16, carY - 22, 32, 44);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(carX - 12, carY - 10, 24, 20);
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(carX - 10, carY - 8, 20, 8);
+
+        ctx.fillStyle = '#991b1b';
+        ctx.fillRect(carX - 18, carY + 18, 36, 6);
+
+        ctx.fillStyle = 'rgba(254, 240, 138, 0.25)';
+        ctx.beginPath();
+        ctx.moveTo(carX - 12, carY - 22);
+        ctx.lineTo(carX - 25, carY - 90);
+        ctx.lineTo(carX + 25, carY - 90);
+        ctx.lineTo(carX + 12, carY - 22);
+        ctx.closePath();
+        ctx.fill();
+
+        if (stageProgress >= currentStage.length) {
+          finishStage();
+          return;
+        }
+
+        animFrameId = requestAnimationFrame(gameLoop);
+      }
+
+      setDirection('LEFT');
+      updateStageButtons();
+      syncCanvasSize();
+    });
+  </script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Call The Stage - Co-Driver Academy v1.2</title>
+  <title>Call The Stage - Co-Driver Academy v1.3</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -87,7 +87,7 @@
             <span class="text-[9px] opacity-75 font-normal">National</span>
           </button>
           <button data-stage="2" class="stage-select-btn p-2 rounded-lg border border-slate-800 bg-slate-900 text-slate-400 font-bold text-xs flex flex-col items-center">
-            <i class="fa-solid fa-[#000] fa-gauge-high mb-1"></i>
+            <i class="fa-solid fa-gauge-high mb-1"></i>
             <span>WRC Express</span>
             <span class="text-[9px] opacity-75 font-normal">Expert</span>
           </button>
@@ -159,48 +159,68 @@
       const canvas = document.getElementById('gameCanvas');
       const ctx = canvas.getContext('2d');
 
+      // Safe Rect Drawing Helper for mobile browser compatibility
+      function drawRoundedRect(ctx, x, y, width, height, radius, fillStyle) {
+        ctx.fillStyle = fillStyle;
+        if (ctx.roundRect) {
+          ctx.beginPath();
+          ctx.roundRect(x, y, width, height, radius);
+          ctx.fill();
+        } else {
+          ctx.fillRect(x, y, width, height);
+        }
+      }
+
       // Speech Synthesis Voice Engine
       const synth = window.speechSynthesis;
       function speakNote(text) {
         if (!synth) return;
-        synth.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.rate = 1.35;
-        utter.pitch = 1.1;
-        synth.speak(utter);
+        try {
+          synth.cancel();
+          const utter = new SpeechSynthesisUtterance(text);
+          utter.rate = 1.35;
+          utter.pitch = 1.1;
+          synth.speak(utter);
+        } catch (e) {
+          console.warn("Speech API suppressed", e);
+        }
       }
 
-      // Web Audio API Synthesizer (Engine hum & Feedback Effects)
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      // Web Audio API Synthesizer
       let audioCtx = null;
-
       function playSoundEffect(type) {
-        if (!audioCtx) audioCtx = new AudioCtx();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!audioCtx && AudioCtx) audioCtx = new AudioCtx();
+          if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+          if (!audioCtx) return;
 
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
 
-        const now = audioCtx.currentTime;
+          const now = audioCtx.currentTime;
 
-        if (type === 'perfect') {
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(523.25, now); // C5
-          osc.frequency.exponentialRampToValueAtTime(880, now + 0.15); // A5
-          gain.gain.setValueAtTime(0.2, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-          osc.start(now);
-          osc.stop(now + 0.15);
-        } else if (type === 'miss') {
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(150, now);
-          osc.frequency.linearRampToValueAtTime(80, now + 0.2);
-          gain.gain.setValueAtTime(0.3, now);
-          gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
-          osc.start(now);
-          osc.stop(now + 0.2);
+          if (type === 'perfect') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.15);
+          } else if (type === 'miss') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(80, now + 0.2);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+          }
+        } catch (e) {
+          console.warn("Audio Context suppressed", e);
         }
       }
 
@@ -285,7 +305,6 @@
 
       let activeCorners = [];
 
-      // Canvas resizing
       function resizeCanvas() {
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width;
@@ -455,7 +474,7 @@
         const targetZoneY = h - 180;
         const currentStage = stages[selectedStageIdx];
 
-        // Background / Terrain
+        // Background
         ctx.fillStyle = currentStage.bgColor;
         ctx.fillRect(0, 0, w, h);
 
@@ -513,11 +532,9 @@
               updatePacenoteHud();
             }
 
-            // Marker Badge
-            ctx.fillStyle = c.called ? '#059669' : c.missed ? '#dc2626' : '#2563eb';
-            ctx.beginPath();
-            ctx.roundRect(markerX - 35, screenY - 20, 70, 40, 8);
-            ctx.fill();
+            // Marker Badge (using safe function)
+            const badgeColor = c.called ? '#059669' : c.missed ? '#dc2626' : '#2563eb';
+            drawRoundedRect(ctx, markerX - 35, screenY - 20, 70, 40, 8, badgeColor);
 
             // Text
             ctx.fillStyle = '#ffffff';
@@ -531,3 +548,31 @@
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(markerX + (isRight ? -35 : 35), screenY);
+            ctx.lineTo(centerX + (isRight ? 60 : -60), screenY);
+            ctx.stroke();
+          }
+        });
+
+        // Player Rally Car
+        drawRoundedRect(ctx, centerX - 18, targetZoneY + 20, 36, 60, 6, '#ef4444');
+
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(centerX - 14, targetZoneY + 35, 28, 20);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(centerX - 4, targetZoneY + 20, 8, 60);
+      }
+
+      function endGame() {
+        isPlaying = false;
+        menuTitle.innerText = 'Stage Complete!';
+        menuSub.innerText = `${stages[selectedStageIdx].name} finished! Score: ${score} pts`;
+        startGameBtn.innerText = 'Replay or Select Stage';
+        startMenu.classList.remove('hidden');
+      }
+
+      startGameBtn.addEventListener('click', startGame);
+    });
+  </script>
+</body>
+</html>

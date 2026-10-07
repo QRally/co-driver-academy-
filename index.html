@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100 select-none">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Call The Stage - Co-Driver Academy v1.2</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    body {
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col justify-between overflow-hidden bg-slate-950 text-slate-100 font-sans">
+
+  <!-- Header / Scoreboard -->
+  <header class="w-full px-4 py-2 bg-slate-900/90 border-b border-slate-800 flex justify-between items-center z-10 shrink-0">
+    <div class="flex items-center space-x-2">
+      <i class="fa-solid fa-flag-checkered text-amber-400 text-lg"></i>
+      <h1 class="font-black tracking-wider uppercase text-sm sm:text-base text-slate-200">
+        Call The Stage
+      </h1>
+    </div>
+
+    <div class="flex items-center space-x-4 font-mono text-xs sm:text-sm">
+      <div class="text-right">
+        <span class="text-slate-400 text-[10px] uppercase block">Score</span>
+        <span id="scoreDisplay" class="font-bold text-amber-400 text-base">0</span>
+      </div>
+      <div class="text-right">
+        <span class="text-slate-400 text-[10px] uppercase block">Progress</span>
+        <span id="progressDisplay" class="font-bold text-emerald-400 text-base">0%</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Game Canvas Area -->
+  <main class="flex-1 relative flex flex-col items-center justify-center w-full max-w-md mx-auto overflow-hidden bg-slate-900">
+    
+    <!-- Canvas for scrolling road & vehicle -->
+    <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+    <!-- Co-Driver Pacenote Book HUD (Top Screen Overlay) -->
+    <div id="pacenoteHud" class="absolute top-2 inset-x-3 bg-slate-950/80 backdrop-blur border border-slate-700/80 rounded-xl p-2 shadow-lg flex items-center justify-between z-10 pointer-events-none">
+      <div class="text-[10px] font-bold text-amber-400 tracking-wider uppercase flex items-center gap-1 shrink-0">
+        <i class="fa-solid fa-book-open"></i> Note Book:
+      </div>
+      <div id="upcomingNotesList" class="flex items-center gap-1.5 overflow-hidden text-xs font-mono font-bold">
+        <!-- Upcoming note badges injected dynamically -->
+      </div>
+    </div>
+
+    <!-- Overlay Feedback Popups (PERFECT, LATE, MISS) -->
+    <div id="feedbackOverlay" class="absolute top-1/3 pointer-events-none text-center opacity-0 transition-all duration-200 transform -translate-y-2 scale-95 z-10">
+      <span id="feedbackText" class="text-3xl font-black uppercase tracking-widest drop-shadow-lg px-4 py-1 rounded-xl bg-slate-950/90 border border-slate-700">
+        PERFECT!
+      </span>
+    </div>
+
+    <!-- Start / Stage Select / Game Over Screen Overlay -->
+    <div id="startMenu" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-20 flex flex-col items-center justify-center p-5 text-center overflow-y-auto">
+      <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl mb-3 shadow-lg shadow-amber-500/10 shrink-0">
+        <i class="fa-solid fa-bullhorn"></i>
+      </div>
+      <h2 id="menuTitle" class="text-2xl font-black uppercase tracking-wide text-white mb-1">Co-Driver Academy</h2>
+      <p id="menuSub" class="text-xs text-slate-400 max-w-xs mb-4">
+        Call corner notes before the rally car reaches the trigger line!
+      </p>
+
+      <!-- Stage Selector -->
+      <div class="w-full max-w-xs mb-4">
+        <label class="block text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Select Special Stage:</label>
+        <div class="grid grid-cols-3 gap-1.5">
+          <button data-stage="0" class="stage-select-btn active p-2 rounded-lg border border-amber-500 bg-amber-500/20 text-amber-300 font-bold text-xs flex flex-col items-center">
+            <i class="fa-solid fa-road mb-1"></i>
+            <span>Tarmac</span>
+            <span class="text-[9px] opacity-75 font-normal">Clubman</span>
+          </button>
+          <button data-stage="1" class="stage-select-btn p-2 rounded-lg border border-slate-800 bg-slate-900 text-slate-400 font-bold text-xs flex flex-col items-center">
+            <i class="fa-solid fa-tree mb-1"></i>
+            <span>Gravel</span>
+            <span class="text-[9px] opacity-75 font-normal">National</span>
+          </button>
+          <button data-stage="2" class="stage-select-btn p-2 rounded-lg border border-slate-800 bg-slate-900 text-slate-400 font-bold text-xs flex flex-col items-center">
+            <i class="fa-solid fa-[#000] fa-gauge-high mb-1"></i>
+            <span>WRC Express</span>
+            <span class="text-[9px] opacity-75 font-normal">Expert</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="w-full max-w-xs space-y-1.5 mb-5 text-left text-[11px] bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+        <div class="flex justify-between text-slate-300">
+          <span class="text-emerald-400 font-bold"><i class="fa-solid fa-check mr-1"></i> PERFECT:</span>
+          <span>Call right at target trigger</span>
+        </div>
+        <div class="flex justify-between text-slate-300">
+          <span class="text-amber-400 font-bold"><i class="fa-solid fa-clock mr-1"></i> EARLY/LATE:</span>
+          <span>Partial points awarded</span>
+        </div>
+        <div class="flex justify-between text-slate-300">
+          <span class="text-red-400 font-bold"><i class="fa-solid fa-xmark mr-1"></i> MISS:</span>
+          <span>Wrong note or missed corner</span>
+        </div>
+      </div>
+
+      <button id="startGameBtn" class="w-full max-w-xs py-3.5 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black tracking-wider uppercase rounded-xl shadow-lg shadow-amber-500/20 transition-all text-sm shrink-0">
+        Start Special Stage
+      </button>
+    </div>
+
+  </main>
+
+  <!-- Control Pad / Note Calling Buttons -->
+  <footer class="w-full bg-slate-900/95 border-t border-slate-800 p-3 z-10 shrink-0 max-w-md mx-auto">
+    <div class="text-[10px] font-semibold uppercase text-slate-400 tracking-wider mb-2 text-center">
+      Co-Driver Pace Note Keyboard
+    </div>
+
+    <!-- Direction Selector Buttons -->
+    <div class="grid grid-cols-2 gap-2 mb-2">
+      <button id="dirLeftBtn" class="dir-btn active py-2.5 bg-blue-600 border border-blue-400 text-white font-black rounded-lg text-sm flex items-center justify-center space-x-2">
+        <i class="fa-solid fa-arrow-left"></i>
+        <span>LEFT</span>
+      </button>
+      <button id="dirRightBtn" class="dir-btn py-2.5 bg-slate-800 border border-slate-700 text-slate-400 font-black rounded-lg text-sm flex items-center justify-center space-x-2">
+        <span>RIGHT</span>
+        <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+
+    <!-- Severity Grid -->
+    <div class="grid grid-cols-3 gap-2">
+      <button data-note="FAST" class="note-call-btn py-3 bg-emerald-950/80 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 font-black rounded-xl text-xs active:scale-95 transition-all">
+        FAST
+      </button>
+      <button data-note="MEDIUM" class="note-call-btn py-3 bg-amber-950/80 border border-amber-500/40 hover:border-amber-400 text-amber-300 font-black rounded-xl text-xs active:scale-95 transition-all">
+        MEDIUM
+      </button>
+      <button data-note="EASY" class="note-call-btn py-3 bg-orange-950/80 border border-orange-500/40 hover:border-orange-400 text-orange-300 font-black rounded-xl text-xs active:scale-95 transition-all">
+        EASY
+      </button>
+      <button data-note="90" class="note-call-btn py-3 bg-red-950/80 border border-red-500/40 hover:border-red-400 text-red-300 font-black rounded-xl text-xs active:scale-95 transition-all">
+        90
+      </button>
+      <button data-note="HAIRPIN" class="note-call-btn py-3 bg-purple-950/80 border border-purple-500/40 hover:border-purple-400 text-purple-300 font-black rounded-xl text-xs active:scale-95 transition-all col-span-2">
+        HAIRPIN
+      </button>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+
+      // Speech Synthesis Voice Engine
+      const synth = window.speechSynthesis;
+      function speakNote(text) {
+        if (!synth) return;
+        synth.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.rate = 1.35;
+        utter.pitch = 1.1;
+        synth.speak(utter);
+      }
+
+      // Web Audio API Synthesizer (Engine hum & Feedback Effects)
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      let audioCtx = null;
+
+      function playSoundEffect(type) {
+        if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'perfect') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, now); // C5
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.15); // A5
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        } else if (type === 'miss') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(150, now);
+          osc.frequency.linearRampToValueAtTime(80, now + 0.2);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        }
+      }
+
+      // UI Elements
+      const scoreDisplay = document.getElementById('scoreDisplay');
+      const progressDisplay = document.getElementById('progressDisplay');
+      const startMenu = document.getElementById('startMenu');
+      const menuTitle = document.getElementById('menuTitle');
+      const menuSub = document.getElementById('menuSub');
+      const startGameBtn = document.getElementById('startGameBtn');
+      const feedbackOverlay = document.getElementById('feedbackOverlay');
+      const feedbackText = document.getElementById('feedbackText');
+      const dirLeftBtn = document.getElementById('dirLeftBtn');
+      const dirRightBtn = document.getElementById('dirRightBtn');
+      const upcomingNotesList = document.getElementById('upcomingNotesList');
+
+      // Game State
+      let isPlaying = false;
+      let score = 0;
+      let selectedDirection = 'LEFT';
+      let selectedStageIdx = 0;
+      let stageProgress = 0;
+      let animFrameId = null;
+
+      // Stage Definitions
+      const stages = [
+        {
+          name: "Tarmac Sprint",
+          roadColor: '#1e293b',
+          vergeColor: '#334155',
+          bgColor: '#0f172a',
+          scrollSpeed: 3.5,
+          length: 3200,
+          corners: [
+            { distanceY: 400, type: 'FAST', dir: 'LEFT' },
+            { distanceY: 850, type: 'MEDIUM', dir: 'RIGHT' },
+            { distanceY: 1300, type: 'EASY', dir: 'LEFT' },
+            { distanceY: 1750, type: '90', dir: 'RIGHT' },
+            { distanceY: 2200, type: 'MEDIUM', dir: 'LEFT' },
+            { distanceY: 2650, type: 'HAIRPIN', dir: 'RIGHT' },
+            { distanceY: 3000, type: 'FAST', dir: 'RIGHT' }
+          ]
+        },
+        {
+          name: "Gravel Forest",
+          roadColor: '#3f2e18',
+          vergeColor: '#271e10',
+          bgColor: '#0e1f13',
+          scrollSpeed: 4.2,
+          length: 3600,
+          corners: [
+            { distanceY: 400, type: 'MEDIUM', dir: 'RIGHT' },
+            { distanceY: 800, type: 'FAST', dir: 'LEFT' },
+            { distanceY: 1200, type: 'HAIRPIN', dir: 'LEFT' },
+            { distanceY: 1650, type: '90', dir: 'RIGHT' },
+            { distanceY: 2100, type: 'EASY', dir: 'LEFT' },
+            { distanceY: 2550, type: 'MEDIUM', dir: 'RIGHT' },
+            { distanceY: 3000, type: 'HAIRPIN', dir: 'RIGHT' },
+            { distanceY: 3400, type: 'FAST', dir: 'LEFT' }
+          ]
+        },
+        {
+          name: "WRC Express",
+          roadColor: '#111827',
+          vergeColor: '#374151',
+          bgColor: '#030712',
+          scrollSpeed: 5.2,
+          length: 4000,
+          corners: [
+            { distanceY: 450, type: 'FAST', dir: 'LEFT' },
+            { distanceY: 850, type: '90', dir: 'RIGHT' },
+            { distanceY: 1250, type: 'HAIRPIN', dir: 'LEFT' },
+            { distanceY: 1650, type: 'EASY', dir: 'RIGHT' },
+            { distanceY: 2100, type: 'FAST', dir: 'LEFT' },
+            { distanceY: 2500, type: '90', dir: 'LEFT' },
+            { distanceY: 2950, type: 'MEDIUM', dir: 'RIGHT' },
+            { distanceY: 3400, type: 'HAIRPIN', dir: 'RIGHT' },
+            { distanceY: 3800, type: 'FAST', dir: 'LEFT' }
+          ]
+        }
+      ];
+
+      let activeCorners = [];
+
+      // Canvas resizing
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+      }
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      // Stage Selection Handler
+      document.querySelectorAll('.stage-select-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.stage-select-btn').forEach(b => {
+            b.className = 'stage-select-btn p-2 rounded-lg border border-slate-800 bg-slate-900 text-slate-400 font-bold text-xs flex flex-col items-center';
+          });
+          const target = e.currentTarget;
+          selectedStageIdx = parseInt(target.getAttribute('data-stage'));
+          target.className = 'stage-select-btn active p-2 rounded-lg border border-amber-500 bg-amber-500/20 text-amber-300 font-bold text-xs flex flex-col items-center';
+        });
+      });
+
+      // Direction Selectors
+      dirLeftBtn.addEventListener('click', () => {
+        selectedDirection = 'LEFT';
+        dirLeftBtn.className = 'dir-btn active py-2.5 bg-blue-600 border border-blue-400 text-white font-black rounded-lg text-sm flex items-center justify-center space-x-2';
+        dirRightBtn.className = 'dir-btn py-2.5 bg-slate-800 border border-slate-700 text-slate-400 font-black rounded-lg text-sm flex items-center justify-center space-x-2';
+      });
+
+      dirRightBtn.addEventListener('click', () => {
+        selectedDirection = 'RIGHT';
+        dirRightBtn.className = 'dir-btn active py-2.5 bg-blue-600 border border-blue-400 text-white font-black rounded-lg text-sm flex items-center justify-center space-x-2';
+        dirLeftBtn.className = 'dir-btn py-2.5 bg-slate-800 border border-slate-700 text-slate-400 font-black rounded-lg text-sm flex items-center justify-center space-x-2';
+      });
+
+      // Start Game Session
+      function startGame() {
+        score = 0;
+        stageProgress = 0;
+        isPlaying = true;
+        
+        const currentStage = stages[selectedStageIdx];
+        activeCorners = currentStage.corners.map(c => ({
+          ...c,
+          called: false,
+          missed: false
+        }));
+
+        scoreDisplay.innerText = '0';
+        progressDisplay.innerText = '0%';
+        startMenu.classList.add('hidden');
+
+        updatePacenoteHud();
+        requestAnimationFrame(gameLoop);
+      }
+
+      // Handle Callout Buttons
+      document.querySelectorAll('.note-call-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          if (!isPlaying) return;
+          const noteType = e.currentTarget.getAttribute('data-note');
+          processCallout(noteType, selectedDirection);
+        });
+      });
+
+      function processCallout(noteType, direction) {
+        speakNote(`${noteType} ${direction.toLowerCase()}`);
+
+        const currentStage = stages[selectedStageIdx];
+        const targetZoneY = canvas.height - 180;
+        let targetCorner = null;
+        let minDiff = 9999;
+
+        activeCorners.forEach(c => {
+          if (c.called || c.missed) return;
+          const screenY = targetZoneY - (c.distanceY - stageProgress);
+          const diff = Math.abs(screenY - targetZoneY);
+
+          if (diff < minDiff && screenY < canvas.height) {
+            minDiff = diff;
+            targetCorner = c;
+          }
+        });
+
+        if (targetCorner && minDiff < 150) {
+          if (targetCorner.type === noteType && targetCorner.dir === direction) {
+            targetCorner.called = true;
+            playSoundEffect('perfect');
+            if (minDiff < 35) {
+              triggerFeedback('PERFECT!', 'text-emerald-400', 'border-emerald-500');
+              score += 200;
+            } else if (minDiff < 85) {
+              triggerFeedback('GOOD!', 'text-amber-400', 'border-amber-500');
+              score += 100;
+            } else {
+              triggerFeedback('EARLY!', 'text-orange-400', 'border-orange-500');
+              score += 50;
+            }
+          } else {
+            playSoundEffect('miss');
+            triggerFeedback('WRONG NOTE!', 'text-red-400', 'border-red-500');
+            score = Math.max(0, score - 50);
+          }
+        } else {
+          playSoundEffect('miss');
+          triggerFeedback('NO CORNER!', 'text-slate-400', 'border-slate-600');
+        }
+
+        scoreDisplay.innerText = score.toString();
+        updatePacenoteHud();
+      }
+
+      function updatePacenoteHud() {
+        const remaining = activeCorners.filter(c => !c.called && !c.missed).slice(0, 3);
+        upcomingNotesList.innerHTML = '';
+
+        if (remaining.length === 0) {
+          upcomingNotesList.innerHTML = '<span class="text-slate-500 text-[10px]">Finish Line Ahead</span>';
+          return;
+        }
+
+        remaining.forEach((c, idx) => {
+          const badge = document.createElement('span');
+          const isFirst = idx === 0;
+          badge.className = `px-2 py-0.5 rounded border ${
+            isFirst 
+              ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-black' 
+              : 'bg-slate-800 border-slate-700 text-slate-400'
+          }`;
+          badge.innerText = `${c.type} ${c.dir === 'RIGHT' ? 'R' : 'L'}`;
+          upcomingNotesList.appendChild(badge);
+        });
+      }
+
+      function triggerFeedback(text, colorClass, borderClass) {
+        feedbackText.innerText = text;
+        feedbackText.className = `text-3xl font-black uppercase tracking-widest drop-shadow-lg px-4 py-1 rounded-xl bg-slate-950/90 border ${borderClass} ${colorClass}`;
+        feedbackOverlay.classList.remove('opacity-0', '-translate-y-2', 'scale-95');
+        feedbackOverlay.classList.add('opacity-100', 'translate-y-0', 'scale-100');
+
+        setTimeout(() => {
+          feedbackOverlay.classList.add('opacity-0', '-translate-y-2', 'scale-95');
+          feedbackOverlay.classList.remove('opacity-100', 'translate-y-0', 'scale-100');
+        }, 600);
+      }
+
+      function gameLoop() {
+        if (!isPlaying) return;
+
+        const currentStage = stages[selectedStageIdx];
+        stageProgress += currentStage.scrollSpeed;
+        const progressPct = Math.min(100, Math.floor((stageProgress / currentStage.length) * 100));
+        progressDisplay.innerText = `${progressPct}%`;
+
+        render();
+
+        if (stageProgress >= currentStage.length) {
+          endGame();
+          return;
+        }
+
+        animFrameId = requestAnimationFrame(gameLoop);
+      }
+
+      function render() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const centerX = w / 2;
+        const targetZoneY = h - 180;
+        const currentStage = stages[selectedStageIdx];
+
+        // Background / Terrain
+        ctx.fillStyle = currentStage.bgColor;
+        ctx.fillRect(0, 0, w, h);
+
+        // Main Road surface
+        ctx.fillStyle = currentStage.roadColor;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 80, 0);
+        ctx.lineTo(centerX + 80, 0);
+        ctx.lineTo(centerX + 80, h);
+        ctx.lineTo(centerX - 80, h);
+        ctx.closePath();
+        ctx.fill();
+
+        // Road Edges / Verge
+        ctx.strokeStyle = currentStage.vergeColor;
+        ctx.lineWidth = 6;
+        ctx.strokeRect(centerX - 80, 0, 160, h);
+
+        // Dashed Centerline
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([20, 20]);
+        ctx.lineDashOffset = -stageProgress % 40;
+        ctx.beginPath();
+        ctx.moveTo(centerX, 0);
+        ctx.lineTo(centerX, h);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Target Callout Line
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 90, targetZoneY);
+        ctx.lineTo(centerX + 90, targetZoneY);
+        ctx.stroke();
+
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('TRIGGER ZONE', centerX, targetZoneY - 8);
+
+        // Approaching Corner Markers
+        activeCorners.forEach(c => {
+          const screenY = targetZoneY - (c.distanceY - stageProgress);
+
+          if (screenY > -50 && screenY < h + 50) {
+            const isRight = c.dir === 'RIGHT';
+            const markerX = isRight ? centerX + 110 : centerX - 110;
+
+            if (screenY > targetZoneY + 60 && !c.called && !c.missed) {
+              c.missed = true;
+              playSoundEffect('miss');
+              triggerFeedback('MISSED NOTE!', 'text-red-500', 'border-red-600');
+              updatePacenoteHud();
+            }
+
+            // Marker Badge
+            ctx.fillStyle = c.called ? '#059669' : c.missed ? '#dc2626' : '#2563eb';
+            ctx.beginPath();
+            ctx.roundRect(markerX - 35, screenY - 20, 70, 40, 8);
+            ctx.fill();
+
+            // Text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${c.type} ${isRight ? 'R' : 'L'}`, markerX, screenY);
+
+            // Connection Arrow
+            ctx.strokeStyle = c.called ? '#10b981' : '#60a5fa';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(markerX + (isRight ? -35 : 35), screenY);
